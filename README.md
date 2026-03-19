@@ -48,6 +48,34 @@ pip3 install pyvmomi
 
 ---
 
+## Porte di rete richieste
+
+Per il corretto funzionamento dello script, le seguenti porte devono essere aperte tra il server di monitoraggio (Icinga/NetEye) e i target:
+
+| Sorgente | Destinazione | Porta | Protocollo | Descrizione |
+|---|---|---|---|---|
+| Monitoring server | vCenter Server | **443/tcp** | HTTPS | vSphere API (pyVmomi / SOAP) |
+| Monitoring server | VRA Appliance | **5480/tcp** | HTTPS | VAMI API (gestione appliance) |
+
+### Porte aggiuntive dell'infrastruttura vSphere Replication
+
+Queste porte non sono usate direttamente dallo script, ma devono essere aperte nell'infrastruttura per il corretto funzionamento della replica stessa:
+
+| Sorgente | Destinazione | Porta | Protocollo | Descrizione |
+|---|---|---|---|---|
+| VRA | vCenter Server | **443/tcp** | HTTPS | Registrazione e comunicazione VRA-vCenter |
+| VRA | ESXi hosts | **902/tcp** | TCP | Traffico NFC (Network File Copy) per i dati di replica |
+| ESXi hosts (source) | VRA (target) | **31031/tcp** | TCP | Traffico dati di replica vSphere Replication |
+| ESXi hosts (source) | VRA (target) | **44046/tcp** | TCP | Traffico dati di replica (canale aggiuntivo) |
+| VRA (site A) | VRA (site B) | **80/tcp** | HTTP | Comunicazione inter-site VRA (lookup service) |
+| VRA (site A) | VRA (site B) | **443/tcp** | HTTPS | Comunicazione inter-site VRA (pairing) |
+| VRA | VRA | **5480/tcp** | HTTPS | VAMI management locale |
+| Browser/Client | VRA | **5480/tcp** | HTTPS | Accesso web VAMI per amministrazione |
+
+> **Nota:** Le porte 31031 e 44046 sono specifiche di vSphere Replication e gestiscono il trasferimento dati tra sito sorgente e sito target.
+
+---
+
 ## Installazione
 
 ```bash
@@ -105,7 +133,7 @@ check_vsphere_replication.py -H <vcenter> -u <user> -p <password> [opzioni]
 ### Check base - solo vCenter
 
 ```bash
-./check_vsphere_replication.py -H vcenter.example.com -u monitoring@vsphere.local -p 'MyP@ss'
+./check_vsphere_replication.py -H <VCENTER_HOST> -u <USERNAME> -p '<PASSWORD>'
 ```
 
 Output:
@@ -117,28 +145,28 @@ OK! vSphere Replication healthy. 12 VM(s) replicated, no errors in last 24h | re
 
 ```bash
 ./check_vsphere_replication.py \
-  -H vcenter.example.com \
-  -u monitoring@vsphere.local \
-  -p 'MyP@ss' \
-  --vra-host 10.22.136.59 \
-  --vra-user admin \
-  --vra-password 'VraP@ss'
+  -H <VCENTER_HOST> \
+  -u <USERNAME> \
+  -p '<PASSWORD>' \
+  --vra-host <VRA_HOST> \
+  --vra-user <VRA_USERNAME> \
+  --vra-password '<VRA_PASSWORD>'
 ```
 
 ### Check con finestra temporale ridotta (ultime 6 ore)
 
 ```bash
 ./check_vsphere_replication.py \
-  -H vcenter.example.com \
-  -u monitoring@vsphere.local \
-  -p 'MyP@ss' \
+  -H <VCENTER_HOST> \
+  -u <USERNAME> \
+  -p '<PASSWORD>' \
   --hours 6
 ```
 
 ### Esempio output CRITICAL
 
 ```
-CRITICAL! 2 failure(s): VM:webserver01: HbrReplicationVmErrorEvent, VRA 10.22.136.59: hbrsrv STOPPED | replicated_vms=12 replication_errors=2 replication_rpo_violations=0 svc_hms=1 svc_hbrsrv=0
+CRITICAL! 2 failure(s): VM:webserver01: HbrReplicationVmErrorEvent, VRA <VRA_HOST>: hbrsrv STOPPED | replicated_vms=12 replication_errors=2 replication_rpo_violations=0 svc_hms=1 svc_hbrsrv=0
 ```
 
 ### Esempio output WARNING
@@ -248,13 +276,13 @@ object CheckCommand "check_vsphere_replication" {
 ```
 apply Service "vsphere-replication" {
   check_command = "check_vsphere_replication"
-  vars.vsphere_replication_host = "vcenter.example.com"
-  vars.vsphere_replication_user = "monitoring@vsphere.local"
-  vars.vsphere_replication_password = "MyP@ss"
+  vars.vsphere_replication_host = "<VCENTER_HOST>"
+  vars.vsphere_replication_user = "<USERNAME>"
+  vars.vsphere_replication_password = "<PASSWORD>"
   vars.vsphere_replication_hours = 24
-  vars.vsphere_replication_vra_host = "10.22.136.59"
-  vars.vsphere_replication_vra_user = "admin"
-  vars.vsphere_replication_vra_password = "VraP@ss"
+  vars.vsphere_replication_vra_host = "<VRA_HOST>"
+  vars.vsphere_replication_vra_user = "<VRA_USERNAME>"
+  vars.vsphere_replication_vra_password = "<VRA_PASSWORD>"
   check_interval = 5m
   retry_interval = 1m
   assign where host.vars.role == "vcenter"
