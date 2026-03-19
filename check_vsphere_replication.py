@@ -11,7 +11,7 @@
 # Uso:
 #   ./check_vsphere_replication.py -H <vcenter> -u <user> -p <password>
 #   ./check_vsphere_replication.py -H <vcenter> -u <user> -p <password> \
-#     --vra-host 10.22.136.59 --vra-user admin --vra-password <pass>
+#     --vra-host <vra-ip> --vra-user <vra-user> --vra-password <pass>
 
 import sys
 import argparse
